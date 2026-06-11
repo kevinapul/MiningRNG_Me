@@ -8,12 +8,12 @@ local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Hapus GUI lama jika ada agar tidak double saat di-execute ulang
+-- Hapus GUI lama jika ada
 if PlayerGui:FindFirstChild("KuroHub_V54_Farm") then
 	PlayerGui.KuroHub_V54_Farm:Destroy()
 end
 
--- KuroHub Theme Palette
+-- KuroHub V5.3 Theme Palette
 local Theme = {
 	Background = Color3.fromRGB(13,13,15),
 	Topbar = Color3.fromRGB(11,11,13),
@@ -26,16 +26,13 @@ local Theme = {
 	Muted = Color3.fromRGB(140,140,150)
 }
 
-print("1 - Theme loaded successfully") -- CHECKPOINT 1
-
--- STATE MANAGEMENT (Menggunakan struktur data sukses dari hasil debug kamu)
+-- STATE MANAGEMENT (Auto Farm & Finder)
 local AutoFarmRunning = false
 local SelectedZoneName = "Select Zone"
 local SelectedOreName = "Select Ore"
 
--- TERSANGKA #3 (DIBERSIHKAN): Langsung menggunakan FindFirstChild agar instant tanpa delay 10 detik
 local ZonesFolder = workspace:FindFirstChild("Zones")
-local CurrentTargetOre = nil
+local CurrentTargetOre = nil -- Mengunci target batu saat ini
 
 --////////////////////////////////////////////////////////////
 -- MAIN GUI EXTRACTION (KUROHUB STYLE)
@@ -51,16 +48,11 @@ Main.Size = UDim2.new(0,580,0,360)
 Main.Position = UDim2.new(0.5,-290,0.5,-180)
 Main.BackgroundColor3 = Theme.Background
 Main.BorderSizePixel = 0
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0,10)
-MainCorner.Parent = Main
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0,10)
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Theme.Stroke
 MainStroke.Parent = Main
-
-print("2 - Main Frame created successfully") -- CHECKPOINT 2
+MainStroke.Color = Theme.Stroke
 
 -- Topbar
 local Topbar = Instance.new("Frame")
@@ -68,10 +60,7 @@ Topbar.Parent = Main
 Topbar.Size = UDim2.new(1,0,0,44)
 Topbar.BackgroundColor3 = Theme.Topbar
 Topbar.BorderSizePixel = 0
-
-local TopbarCorner = Instance.new("UICorner")
-TopbarCorner.CornerRadius = UDim.new(0,10)
-TopbarCorner.Parent = Topbar
+Instance.new("UICorner", Topbar).CornerRadius = UDim.new(0,10)
 
 local TopbarFix = Instance.new("Frame")
 TopbarFix.Parent = Topbar
@@ -92,7 +81,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Minimize & Close Buttons
+-- Minimize & Close Button
 local Minimize = Instance.new("TextButton")
 Minimize.Parent = Topbar
 Minimize.AnchorPoint = Vector2.new(1,0)
@@ -103,10 +92,7 @@ Minimize.Text = "-"
 Minimize.TextColor3 = Theme.Text
 Minimize.Font = Enum.Font.GothamBold
 Minimize.TextSize = 16
-
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0,6)
-MinCorner.Parent = Minimize
+Instance.new("UICorner", Minimize).CornerRadius = UDim.new(0,6)
 
 local Close = Instance.new("TextButton")
 Close.Parent = Topbar
@@ -118,10 +104,7 @@ Close.Text = "×"
 Close.TextColor3 = Color3.fromRGB(255,100,100)
 Close.Font = Enum.Font.GothamBold
 Close.TextSize = 16
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0,6)
-CloseCorner.Parent = Close
+Instance.new("UICorner", Close).CornerRadius = UDim.new(0,6)
 
 -- Sidebar
 local Sidebar = Instance.new("Frame")
@@ -159,14 +142,10 @@ local function CreateTab(text, default)
 	Tab.TextColor3 = default and Theme.Accent or Theme.Muted
 	Tab.Font = Enum.Font.GothamMedium
 	Tab.TextSize = 13
-	
-	local TabCorner = Instance.new("UICorner")
-	TabCorner.CornerRadius = UDim.new(0,6)
-	TabCorner.Parent = Tab
-
+	Instance.new("UICorner", Tab).CornerRadius = UDim.new(0,6)
 	local Stroke = Instance.new("UIStroke")
-	Stroke.Color = Theme.Stroke
 	Stroke.Parent = Tab
+	Stroke.Color = Theme.Stroke
 
 	local Page = Instance.new("ScrollingFrame")
 	Page.Parent = Main
@@ -180,7 +159,6 @@ local function CreateTab(text, default)
 	Page.Visible = default
 
 	local Layout = Instance.new("UIListLayout")
-	Layout.Name = "MainLayout"
 	Layout.Parent = Page
 	Layout.Padding = UDim.new(0,10)
 
@@ -203,32 +181,26 @@ local function CreateTab(text, default)
 	return Page
 end
 
+-- Buat Halaman Utama Farm
 local AutoFarmPage = CreateTab("Auto Farm", true)
 
-print("3 - CreateTab initialized successfully") -- CHECKPOINT 3
-
---////////////////////////////////////////////////////////////
--- COLLAPSE CONTAINER BUILDER
---////////////////////////////////////////////////////////////
-local function CreateCollapse(parent, text, defaultOpen)
+-- Kuro Collapse System
+local function CreateCollapse(parent, text, defaultOpen, openSize)
+	local ClosedSize = 42
 	local Holder = Instance.new("Frame")
 	Holder.Parent = parent
 	Holder.BackgroundTransparency = 1
-	Holder.Size = UDim2.new(1, -5, 0, 42)
+	Holder.Size = UDim2.new(1, -5, 0, defaultOpen and openSize or ClosedSize)
 
 	local Header = Instance.new("TextButton")
 	Header.Parent = Holder
 	Header.Size = UDim2.new(1, 0, 0, 42)
 	Header.BackgroundColor3 = Theme.Card
 	Header.Text = ""
-	
-	local HeaderCorner = Instance.new("UICorner")
-	HeaderCorner.CornerRadius = UDim.new(0,8)
-	HeaderCorner.Parent = Header
-
+	Instance.new("UICorner", Header).CornerRadius = UDim.new(0,8)
 	local Stroke = Instance.new("UIStroke")
-	Stroke.Color = Theme.Stroke
 	Stroke.Parent = Header
+	Stroke.Color = Theme.Stroke
 
 	local Label = Instance.new("TextLabel")
 	Label.Parent = Header
@@ -256,74 +228,34 @@ local function CreateCollapse(parent, text, defaultOpen)
 	Body.Parent = Holder
 	Body.Visible = defaultOpen
 	Body.Position = UDim2.new(0, 0, 0, 50)
-	Body.Size = UDim2.new(1, 0, 0, 0)
+	Body.Size = UDim2.new(1, 0, 0, openSize - 50)
 	Body.BackgroundColor3 = Theme.Card2
-	Body.ClipsDescendants = false
-	
-	local BodyCorner = Instance.new("UICorner")
-	BodyCorner.CornerRadius = UDim.new(0,8)
-	BodyCorner.Parent = Body
-
+	Body.ClipsDescendants = true
+	Instance.new("UICorner", Body).CornerRadius = UDim.new(0,8)
 	local BodyStroke = Instance.new("UIStroke")
-	BodyStroke.Color = Theme.Stroke
 	BodyStroke.Parent = Body
-
-	local BodyLayout = Instance.new("UIListLayout")
-	BodyLayout.Parent = Body
-	BodyLayout.Padding = UDim.new(0, 10)
-	BodyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-	local UIPadding = Instance.new("UIPadding")
-	UIPadding.Parent = Body
-	UIPadding.PaddingTop = UDim.new(0, 12)
-	UIPadding.PaddingBottom = UDim.new(0, 12)
-
-	local function UpdateSizes()
-		if Body.Visible then
-			local contentSize = BodyLayout.AbsoluteContentSize.Y + UIPadding.PaddingTop.Offset + UIPadding.PaddingBottom.Offset
-			Body.Size = UDim2.new(1, 0, 0, contentSize)
-			Holder.Size = UDim2.new(1, -5, 0, 50 + contentSize)
-		else
-			Holder.Size = UDim2.new(1, -5, 0, 42)
-		end
-		
-		local mainLayout = parent:FindFirstChild("MainLayout")
-		-- TERSANGKA #4 (DIBERSIHKAN): Ditambahkan print & proteksi kondisional if-statement agar tidak error nil
-		print("Debug Collapse mainLayout status:", mainLayout)
-		if mainLayout then
-			parent.CanvasSize = UDim2.new(0, 0, 0, mainLayout.AbsoluteContentSize.Y + 20)
-		end
-	end
-
-	BodyLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateSizes)
+	BodyStroke.Color = Theme.Stroke
 
 	local Open = defaultOpen
 	Header.MouseButton1Click:Connect(function()
 		Open = not Open
 		Body.Visible = Open
 		Arrow.Text = Open and "▲" or "▼"
-		UpdateSizes()
+		Holder.Size = UDim2.new(1, -5, 0, Open and openSize or ClosedSize)
 	end)
-
-	task.spawn(UpdateSizes)
 	return Body
 end
 
-local FarmMain = CreateCollapse(AutoFarmPage, "Ores Farming Controller", true)
-
-print("4 - CreateCollapse processed successfully") -- CHECKPOINT 4
+-- Collapse untuk Farm Settings
+local FarmMain = CreateCollapse(AutoFarmPage, "Ores Farming Controller", true, 280)
 
 -- Toggle Builder Function
-local function CreateToggle(parent, text, default, callback)
-	local Container = Instance.new("Frame")
-	Container.Parent = parent
-	Container.Size = UDim2.new(1, -28, 0, 24)
-	Container.BackgroundTransparency = 1
-
+local function CreateToggle(parent, text, y, default, callback)
 	local Enabled = default
 	local Label = Instance.new("TextLabel")
-	Label.Parent = Container
-	Label.Size = UDim2.new(0, 160, 1, 0)
+	Label.Parent = parent
+	Label.Position = UDim2.new(0, 14, 0, y)
+	Label.Size = UDim2.new(0, 160, 0, 20)
 	Label.BackgroundTransparency = 1
 	Label.Text = text
 	Label.TextColor3 = Theme.Text
@@ -332,25 +264,19 @@ local function CreateToggle(parent, text, default, callback)
 	Label.TextXAlignment = Enum.TextXAlignment.Left
 
 	local Toggle = Instance.new("TextButton")
-	Toggle.Parent = Container
-	Toggle.Position = UDim2.new(1, -40, 0.5, -10)
+	Toggle.Parent = parent
+	Toggle.Position = UDim2.new(1, -54, 0, y)
 	Toggle.Size = UDim2.new(0, 40, 0, 20)
 	Toggle.BackgroundColor3 = Enabled and Theme.Accent or Theme.Card
 	Toggle.Text = ""
-	
-	local ToggleCorner = Instance.new("UICorner")
-	ToggleCorner.CornerRadius = UDim.new(1,0)
-	ToggleCorner.Parent = Toggle
+	Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1,0)
 
 	local Circle = Instance.new("Frame")
 	Circle.Parent = Toggle
 	Circle.Size = UDim2.new(0, 16, 0, 16)
 	Circle.Position = Enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
 	Circle.BackgroundColor3 = Theme.Text
-	
-	local CircleCorner = Instance.new("UICorner")
-	CircleCorner.CornerRadius = UDim.new(1,0)
-	CircleCorner.Parent = Circle
+	Instance.new("UICorner", Circle).CornerRadius = UDim.new(1,0)
 
 	Toggle.MouseButton1Click:Connect(function()
 		Enabled = not Enabled
@@ -362,155 +288,111 @@ local function CreateToggle(parent, text, default, callback)
 end
 
 --////////////////////////////////////////////////////////////
--- DROPDOWN BUILDER (DE-CHAINED PROPERTY & SAFE DESIGN)
+-- DROPDOWN BUILDER (CUSTOM FOR ZONE & ORES)
 --////////////////////////////////////////////////////////////
-local function CreateKuroDropdown(parent, placeholder, optionsCallback)
-	local Container = Instance.new("Frame")
-	Container.Parent = parent
-	Container.Size = UDim2.new(1, -28, 0, 32)
-	Container.BackgroundTransparency = 1
-
+local function CreateKuroDropdown(parent, placeholder, y, optionsCallback)
 	local DropdownOpen = false
 
 	local DropBtn = Instance.new("TextButton")
-	DropBtn.Parent = Container
-	DropBtn.Size = UDim2.new(1, 0, 0, 32)
+	DropBtn.Parent = parent
+	DropBtn.Position = UDim2.new(0, 14, 0, y)
+	DropBtn.Size = UDim2.new(1, -28, 0, 32)
 	DropBtn.BackgroundColor3 = Theme.Background
 	DropBtn.Text = placeholder
 	DropBtn.TextColor3 = Theme.Text
 	DropBtn.Font = Enum.Font.GothamMedium
 	DropBtn.TextSize = 12
-	
-	local DropCorner = Instance.new("UICorner")
-	DropCorner.CornerRadius = UDim.new(0,6)
-	DropCorner.Parent = DropBtn
-	
-	-- TERSANGKA #2 (DIBERSIHKAN): Memisahkan penulisan UIStroke DropBtn
-	local DropStroke = Instance.new("UIStroke")
-	DropStroke.Color = Theme.Stroke
-	DropStroke.Parent = DropBtn
+	Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0,6)
+	Instance.new("UIStroke", DropBtn).Color = Theme.Stroke
 
 	local ListFrame = Instance.new("ScrollingFrame")
-	ListFrame.Parent = Container
+	ListFrame.Parent = parent
 	ListFrame.Visible = false
-	ListFrame.Size = UDim2.new(1, 0, 0, 110)
-	ListFrame.Position = UDim2.new(0, 0, 0, 36)
+	ListFrame.Size = UDim2.new(1, -28, 0, 100)
+	ListFrame.Position = UDim2.new(0, 14, 0, y + 36)
 	ListFrame.BackgroundColor3 = Theme.Card
 	ListFrame.BorderSizePixel = 0
-	ListFrame.ZIndex = 10
-	ListFrame.ScrollBarThickness = 4
-	ListFrame.ScrollBarImageColor3 = Theme.Accent
-	
-	local ListCorner = Instance.new("UICorner")
-	ListCorner.CornerRadius = UDim.new(0,6)
-	ListCorner.Parent = ListFrame
-	
-	-- TERSANGKA #2 (DIBERSIHKAN): Memisahkan penulisan UIStroke ListFrame
-	local ListStroke = Instance.new("UIStroke")
-	ListStroke.Color = Theme.Stroke
-	ListStroke.Parent = ListFrame
+	ListFrame.ZIndex = 5
+	ListFrame.ScrollBarThickness = 2
+	Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0,6)
+	Instance.new("UIStroke", ListFrame).Color = Theme.Stroke
 
 	local ListLayout = Instance.new("UIListLayout")
 	ListLayout.Parent = ListFrame
 	ListLayout.Padding = UDim.new(0, 4)
-	ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	
-	-- TERSANGKA #1 (DIBERSIHKAN): Memisahkan penulisan UIPadding secara utuh & aman
-	local Padding = Instance.new("UIPadding")
-	Padding.PaddingTop = UDim.new(0, 4)
-	Padding.Parent = ListFrame
 
 	local function CloseDrop()
 		DropdownOpen = false
 		ListFrame.Visible = false
-		Container.Size = UDim2.new(1, -28, 0, 32)
 	end
 
 	DropBtn.MouseButton1Click:Connect(function()
 		DropdownOpen = not DropdownOpen
+		ListFrame.Visible = DropdownOpen
 		
 		if DropdownOpen then
-			-- Reset list tombol lama sebelum menggambar list yang baru
+			-- Bersihkan list lama sebelum render opsi baru
 			for _, child in ipairs(ListFrame:GetChildren()) do
 				if child:IsA("TextButton") then child:Destroy() end
 			end
 			
 			local currentOptions = optionsCallback()
+			ListFrame.CanvasSize = UDim2.new(0, 0, 0, (#currentOptions * 30))
 			
-			if not currentOptions or #currentOptions == 0 then
-				currentOptions = {"No Options Found"}
-			end
-			
-			-- Render dinamis list tombol pilihan
-			ListFrame.CanvasSize = UDim2.new(0, 0, 0, (#currentOptions * 30) + 10)
 			for _, optName in ipairs(currentOptions) do
 				local OptBtn = Instance.new("TextButton")
 				OptBtn.Parent = ListFrame
-				OptBtn.Size = UDim2.new(1, -8, 0, 26)
-				OptBtn.BackgroundColor3 = Theme.Card2
+				OptBtn.Size = UDim2.new(1, -4, 0, 26)
+				OptBtn.BackgroundColor3 = Theme.Background
 				OptBtn.Text = optName
-				OptBtn.TextColor3 = (optName == "No Options Found") and Theme.Muted or Theme.Text
+				OptBtn.TextColor3 = Theme.Text
 				OptBtn.Font = Enum.Font.Gotham
 				OptBtn.TextSize = 11
-				
-				local OptCorner = Instance.new("UICorner")
-				OptCorner.CornerRadius = UDim.new(0,6)
-				OptCorner.Parent = OptBtn
+				Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0,6)
 
-				if optName ~= "No Options Found" then
-					OptBtn.MouseButton1Click:Connect(function()
-						DropBtn.Text = optName
-						CloseDrop()
-						DropBtn.TextColor3 = Theme.Accent
-					end)
-				end
+				OptBtn.MouseButton1Click:Connect(function()
+					DropBtn.Text = optName
+					CloseDrop()
+					DropBtn.TextColor3 = Theme.Accent
+					-- Memicu event custom jika diperlukan lewat property Text
+				end)
 			end
-			
-			ListFrame.Visible = true
-			Container.Size = UDim2.new(1, -28, 0, 150)
-		else
-			CloseDrop()
 		end
 	end)
 
 	return DropBtn
 end
 
--- Info Status Node Real-time Label
+-- Info Node Real-time Label
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Parent = FarmMain
-InfoLabel.Size = UDim2.new(1, -28, 0, 36)
+InfoLabel.Position = UDim2.new(0, 14, 0, 12)
+InfoLabel.Size = UDim2.new(1, -28, 0, 35)
 InfoLabel.BackgroundTransparency = 1
-InfoLabel.RichText = true
 InfoLabel.Text = "Status: Idle | Zone: None | Ore: None"
 InfoLabel.TextColor3 = Theme.Muted
 InfoLabel.Font = Enum.Font.Gotham
 InfoLabel.TextSize = 11
 InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 
---////////////////////////////////////////////////////////////
--- LOGIKA PEMETAAN DROPDOWN (BERDASARKAN DATA HASIL DEBUG KAMU)
---////////////////////////////////////////////////////////////
-local ZoneDropdown = CreateKuroDropdown(FarmMain, "Select Zone", function()
+-- 1. Dropdown Pertama: Zone Selector
+local ZoneDropdown = CreateKuroDropdown(FarmMain, "Select Zone", 55, function()
 	local names = {}
 	if ZonesFolder then
 		for _, z in ipairs(ZonesFolder:GetChildren()) do
 			table.insert(names, z.Name)
 		end
-	else
-		names = {"Zones Folder Not Found"}
 	end
 	return names
 end)
 
-local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", function()
+-- 2. Dropdown Kedua: Ore Selector (Dinonaktifkan jika zone belum dipilih)
+local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", 100, function()
 	local ores = {}
 	local found = {}
-	
-	if SelectedZoneName ~= "Select Zone" and SelectedZoneName ~= "No Options Found" and ZonesFolder then
+	if SelectedZoneName ~= "Select Zone" and ZonesFolder then
 		local targetZone = ZonesFolder:FindFirstChild(SelectedZoneName)
 		if targetZone then
-			-- LOGIKA DEBUG PEMETAAN BATU MILIKMU YANG BERHASIL
 			for _, obj in ipairs(targetZone:GetDescendants()) do
 				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then
 					local oreName = obj.Value.Name
@@ -525,29 +407,28 @@ local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", function()
 	return ores
 end)
 
--- Sinkronisasi pemilihan dropdown
+-- Hubungkan deteksi perubahan dropdown
 ZoneDropdown:GetPropertyChangedSignal("Text"):Connect(function()
 	SelectedZoneName = ZoneDropdown.Text
-	OreDropdown.Text = "Select Ore" 
+	OreDropdown.Text = "Select Ore" -- Reset Ore jika Zone berganti
 	SelectedOreName = "Select Ore"
 end)
 
 OreDropdown:GetPropertyChangedSignal("Text"):Connect(function()
 	SelectedOreName = OreDropdown.Text
-	CurrentTargetOre = nil 
+	CurrentTargetOre = nil -- Reset target farm saat ore diganti
 end)
 
-CreateToggle(FarmMain, "Activate Auto Farm", false, function(state)
+-- 3. Toggle Aktivasi Auto Farm
+CreateToggle(FarmMain, "Activate Auto Farm", 155, false, function(state)
 	AutoFarmRunning = state
 	if not state then
 		CurrentTargetOre = nil
 	end
 end)
 
-print("5 - AutoFarm Engine Setup Ready") -- CHECKPOINT 5
-
 --////////////////////////////////////////////////////////////
--- CORE AUTO FARM ENGINE (DENGAN STRUKTUR POSISI AMAN)
+-- CORE AUTO FARM ENGINE (REAL-TIME SCANNING & ANTI-STICK)
 --////////////////////////////////////////////////////////////
 local function GetClosestOreNode()
 	if not ZonesFolder or SelectedZoneName == "Select Zone" or SelectedOreName == "Select Ore" then
@@ -564,20 +445,17 @@ local function GetClosestOreNode()
 	local closestNode = nil
 	local shortestDist = math.huge
 
-	-- Menggunakan logika scanning presisi milikmu
+	-- Lakukan scanning instant berkala ke seluruh isi folder zone terpilih
 	for _, obj in ipairs(zone:GetDescendants()) do
 		if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value and obj.Value.Name == SelectedOreName then
-			local nodePart = obj.Parent -- Mengambil parent batu (bisa Part / Model)
-			if nodePart then
-				-- Proteksi agar tidak nil index saat mengambil koordinat posisi model/part
-				local partPos = (nodePart:IsA("Model") and nodePart:GetPivot().Position) or (nodePart:IsA("BasePart") and nodePart.Position)
+			local nodePart = obj.Parent
+			if nodePart and (nodePart:IsA("BasePart") or nodePart:IsA("Model")) then
+				local partPos = nodePart:IsA("Model") and nodePart:GetPivot().Position or nodePart.Position
+				local dist = (myPos - partPos).Magnitude
 				
-				if partPos then
-					local dist = (myPos - partPos).Magnitude
-					if dist < shortestDist then
-						shortestDist = dist
-						closestNode = nodePart
-					end
+				if dist < shortestDist then
+					shortestDist = dist
+					closestNode = nodePart
 				end
 			end
 		end
@@ -585,44 +463,45 @@ local function GetClosestOreNode()
 	return closestNode
 end
 
--- Thread loop eksekusi Auto Teleport Farm
+-- Loop Eksekusi Teleport Farm (100% Real-Time & Secure)
 task.spawn(function()
 	while true do
-		task.wait(0.1)
+		task.wait(0.1) -- Refresh scan rate yang sangat responsif
 		
 		if AutoFarmRunning and SelectedZoneName ~= "Select Zone" and SelectedOreName ~= "Select Ore" then
 			local char = LocalPlayer.Character
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			
 			if root then
-				-- Jika target batu masih utuh dan ada di dalam game workspace
+				-- JANGAN PINDAH jika target ore saat ini masih ada di map (masih utuh/belum hancur di-mining)
 				if CurrentTargetOre and CurrentTargetOre.Parent and CurrentTargetOre:FindFirstChild("Ore") then
-					InfoLabel.Text = "Status: <font color='rgb(0,210,255)'>Mining Node...</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
-					
-					local targetPos = (CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position) or CurrentTargetOre.Position
-					root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3.5, 0)) -- Teleport tepat di atas kepala batu (+3.5)
+					InfoLabel.Text = "Status: <font color='rgb(0,210,255)'>Mining Node...</font>\nZone: "..SelectedZoneName.." | Ore: "..SelectedOreName
+					-- Pertahankan posisi agar tidak menjauh saat proses mining berjalan
+					local targetPos = CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position or CurrentTargetOre.Position
+					root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0)) -- Teleport tepat di atas batu
 				else
-					-- Cari batu terdekat berikutnya jika batu lama sudah hancur
+					-- Jika batu sebelumnya sudah hancur/hilang, cari batu baru terdekat secara real-time
 					CurrentTargetOre = GetClosestOreNode()
+					
 					if CurrentTargetOre then
-						local targetPos = (CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position) or CurrentTargetOre.Position
-						root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3.5, 0))
-						InfoLabel.Text = "Status: <font color='rgb(0,255,100)'>Target Found!</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
+						local targetPos = CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position or CurrentTargetOre.Position
+						root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+						InfoLabel.Text = "Status: <font color='rgb(0,255,100)'>Target Found!</font>\nZone: "..SelectedZoneName.." | Ore: "..SelectedOreName
 					else
-						InfoLabel.Text = "Status: <font color='rgb(255,100,100)'>Scanning Ores...</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
+						InfoLabel.Text = "Status: <font color='rgb(255,100,100)'>Scanning (No Node found)</font>\nZone: "..SelectedZoneName.." | Ore: "..SelectedOreName
 					end
 				end
 			end
 		else
 			if not AutoFarmRunning then
-				InfoLabel.Text = "Status: Idle | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
+				InfoLabel.Text = "Status: Idle | Zone: "..SelectedZoneName.." | Ore: "..SelectedOreName
 			end
 		end
 	end
 end)
 
 --////////////////////////////////////////////////////////////
--- UTILITIES SYSTEM (DRAG & CLOSE UI)
+-- UTILITIES SYSTEM (DRAG, MINIMIZE, & CLOSE)
 --////////////////////////////////////////////////////////////
 local Dragging, DragInput, DragStart, StartPos
 Topbar.InputBegan:Connect(function(input)
