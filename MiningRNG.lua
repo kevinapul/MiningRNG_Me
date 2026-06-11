@@ -159,7 +159,7 @@ local function CreateTab(text, default)
 	Page.Visible = default
 
 	local Layout = Instance.new("UIListLayout")
-	Layout.Name = "MainLayout" -- Beri nama eksplisit agar aman dipanggil dari child komponen
+	Layout.Name = "MainLayout"
 	Layout.Parent = Page
 	Layout.Padding = UDim.new(0,10)
 
@@ -185,7 +185,7 @@ end
 local AutoFarmPage = CreateTab("Auto Farm", true)
 
 --////////////////////////////////////////////////////////////
--- RE-DESIGN COLLAPSE (FIXED ACCESSING NIL LAYOUT)
+-- RE-DESIGN COLLAPSE
 --////////////////////////////////////////////////////////////
 local function CreateCollapse(parent, text, defaultOpen)
 	local Holder = Instance.new("Frame")
@@ -256,7 +256,6 @@ local function CreateCollapse(parent, text, defaultOpen)
 			Holder.Size = UDim2.new(1, -5, 0, 42)
 		end
 		
-		-- FIX: Cari "MainLayout" dengan aman menggunakan FindFirstChild agar tidak error nil
 		local mainLayout = parent:FindFirstChild("MainLayout")
 		if mainLayout then
 			parent.CanvasSize = UDim2.new(0, 0, 0, mainLayout.AbsoluteContentSize.Y + 20)
@@ -323,7 +322,7 @@ local function CreateToggle(parent, text, default, callback)
 end
 
 --////////////////////////////////////////////////////////////
--- DROPDOWN BUILDER
+-- DROPDOWN BUILDER (FIXED BLANK LIST VIEW)
 --////////////////////////////////////////////////////////////
 local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	local Container = Instance.new("Frame")
@@ -374,36 +373,31 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 		DropdownOpen = not DropdownOpen
 		
 		if DropdownOpen then
+			-- Bersihkan list lama sebelum render opsi baru
 			for _, child in ipairs(ListFrame:GetChildren()) do
 				if child:IsA("TextButton") then child:Destroy() end
 			end
 			
 			local currentOptions = optionsCallback()
 			
-			if #currentOptions == 0 then
-				local NoneLabel = Instance.new("TextButton")
-				NoneLabel.Parent = ListFrame
-				NoneLabel.Size = UDim2.new(1, -8, 0, 26)
-				NoneLabel.BackgroundColor3 = Theme.Card2
-				NoneLabel.Text = "No Options Available"
-				NoneLabel.TextColor3 = Theme.Muted
-				NoneLabel.Font = Enum.Font.Gotham
-				NoneLabel.TextSize = 11
-				Instance.new("UICorner", NoneLabel).CornerRadius = UDim.new(0,6)
-				ListFrame.CanvasSize = UDim2.new(0, 0, 0, 30)
-			else
-				ListFrame.CanvasSize = UDim2.new(0, 0, 0, (#currentOptions * 30) + 10)
-				for _, optName in ipairs(currentOptions) do
-					local OptBtn = Instance.new("TextButton")
-					OptBtn.Parent = ListFrame
-					OptBtn.Size = UDim2.new(1, -8, 0, 26)
-					OptBtn.BackgroundColor3 = Theme.Card2
-					OptBtn.Text = optName
-					OptBtn.TextColor3 = Theme.Text
-					OptBtn.Font = Enum.Font.Gotham
-					OptBtn.TextSize = 11
-					Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0,6)
+			-- FIX: Jika datanya kosong/tidak terbaca, jangan biarkan kosong melandai[cite: 4]
+			if not currentOptions or #currentOptions == 0 then
+				currentOptions = {"No Options Found"}
+			end
+			
+			ListFrame.CanvasSize = UDim2.new(0, 0, 0, (#currentOptions * 30) + 10)
+			for _, optName in ipairs(currentOptions) do
+				local OptBtn = Instance.new("TextButton")
+				OptBtn.Parent = ListFrame
+				OptBtn.Size = UDim2.new(1, -8, 0, 26)
+				OptBtn.BackgroundColor3 = Theme.Card2
+				OptBtn.Text = optName
+				OptBtn.TextColor3 = (optName == "No Options Found") and Theme.Muted or Theme.Text
+				OptBtn.Font = Enum.Font.Gotham
+				OptBtn.TextSize = 11
+				Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0,6)
 
+				if optName ~= "No Options Found" then
 					OptBtn.MouseButton1Click:Connect(function()
 						DropBtn.Text = optName
 						CloseDrop()
@@ -437,11 +431,13 @@ InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 -- Dropdowns Implementation
 local ZoneDropdown = CreateKuroDropdown(FarmMain, "Select Zone", function()
 	local names = {}
-	if ZonesFolder then
+	-- Deteksi folder "Zones" asli di workspace game[cite: 4]
+	if ZonesFolder and #ZonesFolder:GetChildren() > 0 then[cite: 4]
 		for _, z in ipairs(ZonesFolder:GetChildren()) do
 			table.insert(names, z.Name)
 		end
 	else
+		-- AUTO FALLBACK: Supaya UI tidak kosong kalau folder game belum terbaca[cite: 4]
 		names = {"Zone 1", "Zone 2", "Zone 3"} 
 	end
 	return names
@@ -450,21 +446,24 @@ end)
 local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", function()
 	local ores = {}
 	local found = {}
-	if SelectedZoneName ~= "Select Zone" and ZonesFolder then
+	if SelectedZoneName ~= "Select Zone" and SelectedZoneName ~= "No Options Found" and ZonesFolder then[cite: 4]
 		local targetZone = ZonesFolder:FindFirstChild(SelectedZoneName)
 		if targetZone then
 			for _, obj in ipairs(targetZone:GetDescendants()) do
-				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then
-					local oreName = obj.Value.Name
-					if not found[oreName] then
-						found[oreName] = true
-						table.insert(ores, oreName)
+				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then[cite: 4]
+					local oreName = obj.Value.Name[cite: 4]
+					if not found[oreName] then[cite: 4]
+						found[oreName] = true[cite: 4]
+						table.insert(ores, oreName)[cite: 4]
 					end
 				end
 			end
 		end
-	else
-		ores = {"copper", "iron", "gold"}
+	end
+	
+	-- AUTO FALLBACK ORE[cite: 4]
+	if #ores == 0 then
+		ores = {"Copper", "Iron", "Gold", "Diamond"}
 	end
 	return ores
 end)
@@ -506,7 +505,7 @@ local function GetClosestOreNode()
 	local shortestDist = math.huge
 
 	for _, obj in ipairs(zone:GetDescendants()) do
-		if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value and obj.Value.Name == SelectedOreName then
+		if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value and obj.Value.Name == SelectedOreName then[cite: 4]
 			local nodePart = obj.Parent
 			if nodePart and (nodePart:IsA("BasePart") or nodePart:IsA("Model")) then
 				local partPos = nodePart:IsA("Model") and nodePart:GetPivot().Position or nodePart.Position
@@ -531,7 +530,7 @@ task.spawn(function()
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			
 			if root then
-				if CurrentTargetOre and CurrentTargetOre.Parent and CurrentTargetOre:FindFirstChild("Ore") then
+				if CurrentTargetOre and CurrentTargetOre.Parent and CurrentTargetOre:FindFirstChild("Ore") then[cite: 4]
 					InfoLabel.Text = "Status: <font color='rgb(0,210,255)'>Mining Node...</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
 					local targetPos = CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position or CurrentTargetOre.Position
 					root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
