@@ -8,12 +8,12 @@ local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Hapus GUI lama jika ada
+-- Hapus GUI lama jika ada agar tidak double saat di-execute ulang
 if PlayerGui:FindFirstChild("KuroHub_V54_Farm") then
 	PlayerGui.KuroHub_V54_Farm:Destroy()
 end
 
--- KuroHub V5.3 Theme Palette
+-- KuroHub Theme Palette
 local Theme = {
 	Background = Color3.fromRGB(13,13,15),
 	Topbar = Color3.fromRGB(11,11,13),
@@ -26,12 +26,13 @@ local Theme = {
 	Muted = Color3.fromRGB(140,140,150)
 }
 
--- STATE MANAGEMENT (Auto Farm & Finder)
+-- STATE MANAGEMENT (Menggunakan struktur data sukses dari hasil debug kamu)
 local AutoFarmRunning = false
 local SelectedZoneName = "Select Zone"
 local SelectedOreName = "Select Ore"
 
-local ZonesFolder = workspace:FindFirstChild("Zones")
+-- PATOKAN UTAMA: Menunggu folder "Zones" sampai muncul (maksimal tunggu 10 detik agar tidak hang)
+local ZonesFolder = workspace:WaitForChild("Zones", 10) or workspace:FindFirstChild("Zones")
 local CurrentTargetOre = nil
 
 --////////////////////////////////////////////////////////////
@@ -81,7 +82,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Minimize & Close Button
+-- Minimize & Close Buttons
 local Minimize = Instance.new("TextButton")
 Minimize.Parent = Topbar
 Minimize.AnchorPoint = Vector2.new(1,0)
@@ -185,7 +186,7 @@ end
 local AutoFarmPage = CreateTab("Auto Farm", true)
 
 --////////////////////////////////////////////////////////////
--- RE-DESIGN COLLAPSE
+-- COLLAPSE CONTAINER BUILDER
 --////////////////////////////////////////////////////////////
 local function CreateCollapse(parent, text, defaultOpen)
 	local Holder = Instance.new("Frame")
@@ -273,7 +274,6 @@ local function CreateCollapse(parent, text, defaultOpen)
 	end)
 
 	task.spawn(UpdateSizes)
-
 	return Body
 end
 
@@ -322,7 +322,7 @@ local function CreateToggle(parent, text, default, callback)
 end
 
 --////////////////////////////////////////////////////////////
--- DROPDOWN BUILDER (FIXED BLANK LIST VIEW)
+-- RE-DESIGN DROPDOWN (FIXED STUCK BLANK)
 --////////////////////////////////////////////////////////////
 local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	local Container = Instance.new("Frame")
@@ -346,12 +346,12 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	local ListFrame = Instance.new("ScrollingFrame")
 	ListFrame.Parent = Container
 	ListFrame.Visible = false
-	ListFrame.Size = UDim2.new(1, 0, 0, 100)
+	ListFrame.Size = UDim2.new(1, 0, 0, 110)
 	ListFrame.Position = UDim2.new(0, 0, 0, 36)
 	ListFrame.BackgroundColor3 = Theme.Card
 	ListFrame.BorderSizePixel = 0
 	ListFrame.ZIndex = 10
-	ListFrame.ScrollBarThickness = 3
+	ListFrame.ScrollBarThickness = 4
 	ListFrame.ScrollBarImageColor3 = Theme.Accent
 	Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0,6)
 	Instance.new("UIStroke", ListFrame).Color = Theme.Stroke
@@ -373,18 +373,18 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 		DropdownOpen = not DropdownOpen
 		
 		if DropdownOpen then
-			-- Bersihkan list lama sebelum render opsi baru
+			-- Reset list tombol lama sebelum menggambar list yang baru
 			for _, child in ipairs(ListFrame:GetChildren()) do
 				if child:IsA("TextButton") then child:Destroy() end
 			end
 			
 			local currentOptions = optionsCallback()
 			
-			-- FIX: Jika datanya kosong/tidak terbaca, jangan biarkan kosong melandai[cite: 4]
 			if not currentOptions or #currentOptions == 0 then
 				currentOptions = {"No Options Found"}
 			end
 			
+			-- Render dinamis list tombol pilihan
 			ListFrame.CanvasSize = UDim2.new(0, 0, 0, (#currentOptions * 30) + 10)
 			for _, optName in ipairs(currentOptions) do
 				local OptBtn = Instance.new("TextButton")
@@ -407,7 +407,7 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 			end
 			
 			ListFrame.Visible = true
-			Container.Size = UDim2.new(1, -28, 0, 142)
+			Container.Size = UDim2.new(1, -28, 0, 150)
 		else
 			CloseDrop()
 		end
@@ -416,10 +416,10 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	return DropBtn
 end
 
--- Info Node Real-time Label
+-- Info Status Node Real-time Label
 local InfoLabel = Instance.new("TextLabel")
 InfoLabel.Parent = FarmMain
-InfoLabel.Size = UDim2.new(1, -28, 0, 30)
+InfoLabel.Size = UDim2.new(1, -28, 0, 36)
 InfoLabel.BackgroundTransparency = 1
 InfoLabel.RichText = true
 InfoLabel.Text = "Status: Idle | Zone: None | Ore: None"
@@ -428,17 +428,17 @@ InfoLabel.Font = Enum.Font.Gotham
 InfoLabel.TextSize = 11
 InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Dropdowns Implementation
+--////////////////////////////////////////////////////////////
+-- LOGIKA PEMETAAN DROPDOWN (BERDASARKAN DATA HASIL DEBUG KAMU)
+--////////////////////////////////////////////////////////////
 local ZoneDropdown = CreateKuroDropdown(FarmMain, "Select Zone", function()
 	local names = {}
-	-- Deteksi folder "Zones" asli di workspace game[cite: 4]
-	if ZonesFolder and #ZonesFolder:GetChildren() > 0 then[cite: 4]
+	if ZonesFolder then
 		for _, z in ipairs(ZonesFolder:GetChildren()) do
 			table.insert(names, z.Name)
 		end
 	else
-		-- AUTO FALLBACK: Supaya UI tidak kosong kalau folder game belum terbaca[cite: 4]
-		names = {"Zone 1", "Zone 2", "Zone 3"} 
+		names = {"Zones Folder Not Found"}
 	end
 	return names
 end)
@@ -446,28 +446,26 @@ end)
 local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", function()
 	local ores = {}
 	local found = {}
-	if SelectedZoneName ~= "Select Zone" and SelectedZoneName ~= "No Options Found" and ZonesFolder then[cite: 4]
+	
+	if SelectedZoneName ~= "Select Zone" and SelectedZoneName ~= "No Options Found" and ZonesFolder then
 		local targetZone = ZonesFolder:FindFirstChild(SelectedZoneName)
 		if targetZone then
+			-- LOGIKA DEBUG KAMU: Menelusuri seluruh keturunan zone mencari "Ore" tipe ObjectValue
 			for _, obj in ipairs(targetZone:GetDescendants()) do
-				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then[cite: 4]
-					local oreName = obj.Value.Name[cite: 4]
-					if not found[oreName] then[cite: 4]
-						found[oreName] = true[cite: 4]
-						table.insert(ores, oreName)[cite: 4]
+				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then
+					local oreName = obj.Value.Name
+					if not found[oreName] then
+						found[oreName] = true
+						table.insert(ores, oreName)
 					end
 				end
 			end
 		end
 	end
-	
-	-- AUTO FALLBACK ORE[cite: 4]
-	if #ores == 0 then
-		ores = {"Copper", "Iron", "Gold", "Diamond"}
-	end
 	return ores
 end)
 
+-- Sinkronisasi pemilihan dropdown
 ZoneDropdown:GetPropertyChangedSignal("Text"):Connect(function()
 	SelectedZoneName = ZoneDropdown.Text
 	OreDropdown.Text = "Select Ore" 
@@ -487,7 +485,7 @@ CreateToggle(FarmMain, "Activate Auto Farm", false, function(state)
 end)
 
 --////////////////////////////////////////////////////////////
--- CORE AUTO FARM ENGINE
+-- CORE AUTO FARM ENGINE (DENGAN STRUKTUR POSISI AMAN)
 --////////////////////////////////////////////////////////////
 local function GetClosestOreNode()
 	if not ZonesFolder or SelectedZoneName == "Select Zone" or SelectedOreName == "Select Ore" then
@@ -504,16 +502,20 @@ local function GetClosestOreNode()
 	local closestNode = nil
 	local shortestDist = math.huge
 
+	-- Menggunakan logika scanning presisi milikmu
 	for _, obj in ipairs(zone:GetDescendants()) do
-		if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value and obj.Value.Name == SelectedOreName then[cite: 4]
-			local nodePart = obj.Parent
-			if nodePart and (nodePart:IsA("BasePart") or nodePart:IsA("Model")) then
-				local partPos = nodePart:IsA("Model") and nodePart:GetPivot().Position or nodePart.Position
-				local dist = (myPos - partPos).Magnitude
+		if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value and obj.Value.Name == SelectedOreName then
+			local nodePart = obj.Parent -- Mengambil parent batu (bisa Part / Model)
+			if nodePart then
+				-- Proteksi agar tidak nil index saat mengambil koordinat posisi model/part
+				local partPos = (nodePart:IsA("Model") and nodePart:GetPivot().Position) or (nodePart:IsA("BasePart") and nodePart.Position)
 				
-				if dist < shortestDist then
-					shortestDist = dist
-					closestNode = nodePart
+				if partPos then
+					local dist = (myPos - partPos).Magnitude
+					if dist < shortestDist then
+						shortestDist = dist
+						closestNode = nodePart
+					end
 				end
 			end
 		end
@@ -521,6 +523,7 @@ local function GetClosestOreNode()
 	return closestNode
 end
 
+-- Thread loop eksekusi Auto Teleport Farm
 task.spawn(function()
 	while true do
 		task.wait(0.1)
@@ -530,15 +533,18 @@ task.spawn(function()
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			
 			if root then
-				if CurrentTargetOre and CurrentTargetOre.Parent and CurrentTargetOre:FindFirstChild("Ore") then[cite: 4]
+				-- Jika target batu masih utuh dan ada di dalam game workspace
+				if CurrentTargetOre and CurrentTargetOre.Parent and CurrentTargetOre:FindFirstChild("Ore") then
 					InfoLabel.Text = "Status: <font color='rgb(0,210,255)'>Mining Node...</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
-					local targetPos = CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position or CurrentTargetOre.Position
-					root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+					
+					local targetPos = (CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position) or CurrentTargetOre.Position
+					root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3.5, 0)) -- Teleport tepat di atas kepala batu (+3.5)
 				else
+					-- Cari batu terdekat berikutnya jika batu lama sudah hancur
 					CurrentTargetOre = GetClosestOreNode()
 					if CurrentTargetOre then
-						local targetPos = CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position or CurrentTargetOre.Position
-						root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+						local targetPos = (CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position) or CurrentTargetOre.Position
+						root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3.5, 0))
 						InfoLabel.Text = "Status: <font color='rgb(0,255,100)'>Target Found!</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
 					else
 						InfoLabel.Text = "Status: <font color='rgb(255,100,100)'>Scanning Ores...</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
@@ -554,7 +560,7 @@ task.spawn(function()
 end)
 
 --////////////////////////////////////////////////////////////
--- UTILITIES SYSTEM (DRAG & CLOSE)
+-- UTILITIES SYSTEM (DRAG & CLOSE UI)
 --////////////////////////////////////////////////////////////
 local Dragging, DragInput, DragStart, StartPos
 Topbar.InputBegan:Connect(function(input)
