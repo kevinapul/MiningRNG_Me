@@ -159,6 +159,7 @@ local function CreateTab(text, default)
 	Page.Visible = default
 
 	local Layout = Instance.new("UIListLayout")
+	Layout.Name = "MainLayout" -- Beri nama eksplisit agar aman dipanggil dari child komponen
 	Layout.Parent = Page
 	Layout.Padding = UDim.new(0,10)
 
@@ -184,13 +185,13 @@ end
 local AutoFarmPage = CreateTab("Auto Farm", true)
 
 --////////////////////////////////////////////////////////////
--- RE-DESIGN COLLAPSE (USING UI-LIST-LAYOUT TO PREVENT CLIPPING)
+-- RE-DESIGN COLLAPSE (FIXED ACCESSING NIL LAYOUT)
 --////////////////////////////////////////////////////////////
 local function CreateCollapse(parent, text, defaultOpen)
 	local Holder = Instance.new("Frame")
 	Holder.Parent = parent
 	Holder.BackgroundTransparency = 1
-	Holder.Size = UDim2.new(1, -5, 0, 42) -- Dinamis diatur oleh UIListLayout nanti
+	Holder.Size = UDim2.new(1, -5, 0, 42)
 
 	local Header = Instance.new("TextButton")
 	Header.Parent = Holder
@@ -228,9 +229,9 @@ local function CreateCollapse(parent, text, defaultOpen)
 	Body.Parent = Holder
 	Body.Visible = defaultOpen
 	Body.Position = UDim2.new(0, 0, 0, 50)
-	Body.Size = UDim2.new(1, 0, 0, 0) -- Otomatis membesar mengikuti UIListLayout di dalamnya
+	Body.Size = UDim2.new(1, 0, 0, 0)
 	Body.BackgroundColor3 = Theme.Card2
-	Body.ClipsDescendants = false -- FIX: Di-false agar dropdown tidak terpotong
+	Body.ClipsDescendants = false
 	Instance.new("UICorner", Body).CornerRadius = UDim.new(0,8)
 	local BodyStroke = Instance.new("UIStroke")
 	BodyStroke.Parent = Body
@@ -241,7 +242,6 @@ local function CreateCollapse(parent, text, defaultOpen)
 	BodyLayout.Padding = UDim.new(0, 10)
 	BodyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-	-- Tambahkan padding atas/bawah untuk isi body collapse
 	local UIPadding = Instance.new("UIPadding")
 	UIPadding.Parent = Body
 	UIPadding.PaddingTop = UDim.new(0, 12)
@@ -255,8 +255,12 @@ local function CreateCollapse(parent, text, defaultOpen)
 		else
 			Holder.Size = UDim2.new(1, -5, 0, 42)
 		end
-		-- Sesuaikan canvas size milik ScrollingFrame (Page) agar bisa di-scroll jika kepanjangan
-		parent.CanvasSize = UDim2.new(0, 0, 0, parent.UIListLayout.AbsoluteContentSize.Y + 20)
+		
+		-- FIX: Cari "MainLayout" dengan aman menggunakan FindFirstChild agar tidak error nil
+		local mainLayout = parent:FindFirstChild("MainLayout")
+		if mainLayout then
+			parent.CanvasSize = UDim2.new(0, 0, 0, mainLayout.AbsoluteContentSize.Y + 20)
+		end
 	end
 
 	BodyLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(UpdateSizes)
@@ -319,7 +323,7 @@ local function CreateToggle(parent, text, default, callback)
 end
 
 --////////////////////////////////////////////////////////////
--- DROPDOWN BUILDER (FIXED OPEN/CLOSE AND LAYOUT EXPANSION)
+-- DROPDOWN BUILDER
 --////////////////////////////////////////////////////////////
 local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	local Container = Instance.new("Frame")
@@ -370,7 +374,6 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 		DropdownOpen = not DropdownOpen
 		
 		if DropdownOpen then
-			-- Bersihkan list lama sebelum render opsi baru[cite: 2]
 			for _, child in ipairs(ListFrame:GetChildren()) do
 				if child:IsA("TextButton") then child:Destroy() end
 			end
@@ -409,7 +412,6 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 				end
 			end
 			
-			-- Membuka container agar UIListLayout utama ikut bergeser ke bawah
 			ListFrame.Visible = true
 			Container.Size = UDim2.new(1, -28, 0, 142)
 		else
@@ -432,7 +434,7 @@ InfoLabel.Font = Enum.Font.Gotham
 InfoLabel.TextSize = 11
 InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- 1. Dropdown Pertama: Zone Selector
+-- Dropdowns Implementation
 local ZoneDropdown = CreateKuroDropdown(FarmMain, "Select Zone", function()
 	local names = {}
 	if ZonesFolder then
@@ -440,13 +442,11 @@ local ZoneDropdown = CreateKuroDropdown(FarmMain, "Select Zone", function()
 			table.insert(names, z.Name)
 		end
 	else
-		-- Fallback jika folder game tidak terbaca sewaktu scanning[cite: 2]
 		names = {"Zone 1", "Zone 2", "Zone 3"} 
 	end
 	return names
 end)
 
--- 2. Dropdown Kedua: Ore Selector[cite: 2]
 local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", function()
 	local ores = {}
 	local found = {}
@@ -454,23 +454,21 @@ local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", function()
 		local targetZone = ZonesFolder:FindFirstChild(SelectedZoneName)
 		if targetZone then
 			for _, obj in ipairs(targetZone:GetDescendants()) do
-				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then[cite: 2]
-					local oreName = obj.Value.Name[cite: 2]
-					if not found[oreName] then[cite: 2]
-						found[oreName] = true[cite: 2]
-						table.insert(ores, oreName)[cite: 2]
+				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then
+					local oreName = obj.Value.Name
+					if not found[oreName] then
+						found[oreName] = true
+						table.insert(ores, oreName)
 					end
 				end
 			end
 		end
 	else
-		-- Fallback simulasi data batu[cite: 2]
 		ores = {"copper", "iron", "gold"}
 	end
 	return ores
 end)
 
--- Hubungkan deteksi perubahan dropdown[cite: 2]
 ZoneDropdown:GetPropertyChangedSignal("Text"):Connect(function()
 	SelectedZoneName = ZoneDropdown.Text
 	OreDropdown.Text = "Select Ore" 
@@ -482,7 +480,6 @@ OreDropdown:GetPropertyChangedSignal("Text"):Connect(function()
 	CurrentTargetOre = nil 
 end)
 
--- 3. Toggle Aktivasi Auto Farm
 CreateToggle(FarmMain, "Activate Auto Farm", false, function(state)
 	AutoFarmRunning = state
 	if not state then
@@ -491,7 +488,7 @@ CreateToggle(FarmMain, "Activate Auto Farm", false, function(state)
 end)
 
 --////////////////////////////////////////////////////////////
--- CORE AUTO FARM ENGINE (REAL-TIME SCANNING & ANTI-STICK)
+-- CORE AUTO FARM ENGINE
 --////////////////////////////////////////////////////////////
 local function GetClosestOreNode()
 	if not ZonesFolder or SelectedZoneName == "Select Zone" or SelectedOreName == "Select Ore" then
@@ -509,7 +506,7 @@ local function GetClosestOreNode()
 	local shortestDist = math.huge
 
 	for _, obj in ipairs(zone:GetDescendants()) do
-		if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value and obj.Value.Name == SelectedOreName then[cite: 2]
+		if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value and obj.Value.Name == SelectedOreName then
 			local nodePart = obj.Parent
 			if nodePart and (nodePart:IsA("BasePart") or nodePart:IsA("Model")) then
 				local partPos = nodePart:IsA("Model") and nodePart:GetPivot().Position or nodePart.Position
@@ -534,7 +531,7 @@ task.spawn(function()
 			local root = char and char:FindFirstChild("HumanoidRootPart")
 			
 			if root then
-				if CurrentTargetOre and CurrentTargetOre.Parent and CurrentTargetOre:FindFirstChild("Ore") then[cite: 2]
+				if CurrentTargetOre and CurrentTargetOre.Parent and CurrentTargetOre:FindFirstChild("Ore") then
 					InfoLabel.Text = "Status: <font color='rgb(0,210,255)'>Mining Node...</font> | Zone: " .. SelectedZoneName .. " | Ore: " .. SelectedOreName
 					local targetPos = CurrentTargetOre:IsA("Model") and CurrentTargetOre:GetPivot().Position or CurrentTargetOre.Position
 					root.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
