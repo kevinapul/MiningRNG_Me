@@ -26,13 +26,15 @@ local Theme = {
 	Muted = Color3.fromRGB(140,140,150)
 }
 
+print("1 - Theme loaded successfully") -- CHECKPOINT 1
+
 -- STATE MANAGEMENT (Menggunakan struktur data sukses dari hasil debug kamu)
 local AutoFarmRunning = false
 local SelectedZoneName = "Select Zone"
 local SelectedOreName = "Select Ore"
 
--- PATOKAN UTAMA: Menunggu folder "Zones" sampai muncul (maksimal tunggu 10 detik agar tidak hang)
-local ZonesFolder = workspace:WaitForChild("Zones", 10) or workspace:FindFirstChild("Zones")
+-- TERSANGKA #3 (DIBERSIHKAN): Langsung menggunakan FindFirstChild agar instant tanpa delay 10 detik
+local ZonesFolder = workspace:FindFirstChild("Zones")
 local CurrentTargetOre = nil
 
 --////////////////////////////////////////////////////////////
@@ -49,11 +51,16 @@ Main.Size = UDim2.new(0,580,0,360)
 Main.Position = UDim2.new(0.5,-290,0.5,-180)
 Main.BackgroundColor3 = Theme.Background
 Main.BorderSizePixel = 0
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0,10)
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0,10)
+MainCorner.Parent = Main
 
 local MainStroke = Instance.new("UIStroke")
-MainStroke.Parent = Main
 MainStroke.Color = Theme.Stroke
+MainStroke.Parent = Main
+
+print("2 - Main Frame created successfully") -- CHECKPOINT 2
 
 -- Topbar
 local Topbar = Instance.new("Frame")
@@ -61,7 +68,10 @@ Topbar.Parent = Main
 Topbar.Size = UDim2.new(1,0,0,44)
 Topbar.BackgroundColor3 = Theme.Topbar
 Topbar.BorderSizePixel = 0
-Instance.new("UICorner", Topbar).CornerRadius = UDim.new(0,10)
+
+local TopbarCorner = Instance.new("UICorner")
+TopbarCorner.CornerRadius = UDim.new(0,10)
+TopbarCorner.Parent = Topbar
 
 local TopbarFix = Instance.new("Frame")
 TopbarFix.Parent = Topbar
@@ -93,7 +103,10 @@ Minimize.Text = "-"
 Minimize.TextColor3 = Theme.Text
 Minimize.Font = Enum.Font.GothamBold
 Minimize.TextSize = 16
-Instance.new("UICorner", Minimize).CornerRadius = UDim.new(0,6)
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0,6)
+MinCorner.Parent = Minimize
 
 local Close = Instance.new("TextButton")
 Close.Parent = Topbar
@@ -105,7 +118,10 @@ Close.Text = "×"
 Close.TextColor3 = Color3.fromRGB(255,100,100)
 Close.Font = Enum.Font.GothamBold
 Close.TextSize = 16
-Instance.new("UICorner", Close).CornerRadius = UDim.new(0,6)
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0,6)
+CloseCorner.Parent = Close
 
 -- Sidebar
 local Sidebar = Instance.new("Frame")
@@ -143,10 +159,14 @@ local function CreateTab(text, default)
 	Tab.TextColor3 = default and Theme.Accent or Theme.Muted
 	Tab.Font = Enum.Font.GothamMedium
 	Tab.TextSize = 13
-	Instance.new("UICorner", Tab).CornerRadius = UDim.new(0,6)
+	
+	local TabCorner = Instance.new("UICorner")
+	TabCorner.CornerRadius = UDim.new(0,6)
+	TabCorner.Parent = Tab
+
 	local Stroke = Instance.new("UIStroke")
-	Stroke.Parent = Tab
 	Stroke.Color = Theme.Stroke
+	Stroke.Parent = Tab
 
 	local Page = Instance.new("ScrollingFrame")
 	Page.Parent = Main
@@ -185,6 +205,8 @@ end
 
 local AutoFarmPage = CreateTab("Auto Farm", true)
 
+print("3 - CreateTab initialized successfully") -- CHECKPOINT 3
+
 --////////////////////////////////////////////////////////////
 -- COLLAPSE CONTAINER BUILDER
 --////////////////////////////////////////////////////////////
@@ -199,10 +221,14 @@ local function CreateCollapse(parent, text, defaultOpen)
 	Header.Size = UDim2.new(1, 0, 0, 42)
 	Header.BackgroundColor3 = Theme.Card
 	Header.Text = ""
-	Instance.new("UICorner", Header).CornerRadius = UDim.new(0,8)
+	
+	local HeaderCorner = Instance.new("UICorner")
+	HeaderCorner.CornerRadius = UDim.new(0,8)
+	HeaderCorner.Parent = Header
+
 	local Stroke = Instance.new("UIStroke")
-	Stroke.Parent = Header
 	Stroke.Color = Theme.Stroke
+	Stroke.Parent = Header
 
 	local Label = Instance.new("TextLabel")
 	Label.Parent = Header
@@ -233,10 +259,14 @@ local function CreateCollapse(parent, text, defaultOpen)
 	Body.Size = UDim2.new(1, 0, 0, 0)
 	Body.BackgroundColor3 = Theme.Card2
 	Body.ClipsDescendants = false
-	Instance.new("UICorner", Body).CornerRadius = UDim.new(0,8)
+	
+	local BodyCorner = Instance.new("UICorner")
+	BodyCorner.CornerRadius = UDim.new(0,8)
+	BodyCorner.Parent = Body
+
 	local BodyStroke = Instance.new("UIStroke")
-	BodyStroke.Parent = Body
 	BodyStroke.Color = Theme.Stroke
+	BodyStroke.Parent = Body
 
 	local BodyLayout = Instance.new("UIListLayout")
 	BodyLayout.Parent = Body
@@ -258,6 +288,8 @@ local function CreateCollapse(parent, text, defaultOpen)
 		end
 		
 		local mainLayout = parent:FindFirstChild("MainLayout")
+		-- TERSANGKA #4 (DIBERSIHKAN): Ditambahkan print & proteksi kondisional if-statement agar tidak error nil
+		print("Debug Collapse mainLayout status:", mainLayout)
 		if mainLayout then
 			parent.CanvasSize = UDim2.new(0, 0, 0, mainLayout.AbsoluteContentSize.Y + 20)
 		end
@@ -278,6 +310,8 @@ local function CreateCollapse(parent, text, defaultOpen)
 end
 
 local FarmMain = CreateCollapse(AutoFarmPage, "Ores Farming Controller", true)
+
+print("4 - CreateCollapse processed successfully") -- CHECKPOINT 4
 
 -- Toggle Builder Function
 local function CreateToggle(parent, text, default, callback)
@@ -303,14 +337,20 @@ local function CreateToggle(parent, text, default, callback)
 	Toggle.Size = UDim2.new(0, 40, 0, 20)
 	Toggle.BackgroundColor3 = Enabled and Theme.Accent or Theme.Card
 	Toggle.Text = ""
-	Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1,0)
+	
+	local ToggleCorner = Instance.new("UICorner")
+	ToggleCorner.CornerRadius = UDim.new(1,0)
+	ToggleCorner.Parent = Toggle
 
 	local Circle = Instance.new("Frame")
 	Circle.Parent = Toggle
 	Circle.Size = UDim2.new(0, 16, 0, 16)
 	Circle.Position = Enabled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
 	Circle.BackgroundColor3 = Theme.Text
-	Instance.new("UICorner", Circle).CornerRadius = UDim.new(1,0)
+	
+	local CircleCorner = Instance.new("UICorner")
+	CircleCorner.CornerRadius = UDim.new(1,0)
+	CircleCorner.Parent = Circle
 
 	Toggle.MouseButton1Click:Connect(function()
 		Enabled = not Enabled
@@ -322,7 +362,7 @@ local function CreateToggle(parent, text, default, callback)
 end
 
 --////////////////////////////////////////////////////////////
--- RE-DESIGN DROPDOWN (FIXED STUCK BLANK)
+-- DROPDOWN BUILDER (DE-CHAINED PROPERTY & SAFE DESIGN)
 --////////////////////////////////////////////////////////////
 local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	local Container = Instance.new("Frame")
@@ -340,8 +380,15 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	DropBtn.TextColor3 = Theme.Text
 	DropBtn.Font = Enum.Font.GothamMedium
 	DropBtn.TextSize = 12
-	Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0,6)
-	Instance.new("UIStroke", DropBtn).Color = Theme.Stroke
+	
+	local DropCorner = Instance.new("UICorner")
+	DropCorner.CornerRadius = UDim.new(0,6)
+	DropCorner.Parent = DropBtn
+	
+	-- TERSANGKA #2 (DIBERSIHKAN): Memisahkan penulisan UIStroke DropBtn
+	local DropStroke = Instance.new("UIStroke")
+	DropStroke.Color = Theme.Stroke
+	DropStroke.Parent = DropBtn
 
 	local ListFrame = Instance.new("ScrollingFrame")
 	ListFrame.Parent = Container
@@ -353,15 +400,25 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 	ListFrame.ZIndex = 10
 	ListFrame.ScrollBarThickness = 4
 	ListFrame.ScrollBarImageColor3 = Theme.Accent
-	Instance.new("UICorner", ListFrame).CornerRadius = UDim.new(0,6)
-	Instance.new("UIStroke", ListFrame).Color = Theme.Stroke
+	
+	local ListCorner = Instance.new("UICorner")
+	ListCorner.CornerRadius = UDim.new(0,6)
+	ListCorner.Parent = ListFrame
+	
+	-- TERSANGKA #2 (DIBERSIHKAN): Memisahkan penulisan UIStroke ListFrame
+	local ListStroke = Instance.new("UIStroke")
+	ListStroke.Color = Theme.Stroke
+	ListStroke.Parent = ListFrame
 
 	local ListLayout = Instance.new("UIListLayout")
 	ListLayout.Parent = ListFrame
 	ListLayout.Padding = UDim.new(0, 4)
 	ListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	
-	Instance.new("UIPadding", ListFrame).PaddingTop = UDim.new(0, 4)
+	-- TERSANGKA #1 (DIBERSIHKAN): Memisahkan penulisan UIPadding secara utuh & aman
+	local Padding = Instance.new("UIPadding")
+	Padding.PaddingTop = UDim.new(0, 4)
+	Padding.Parent = ListFrame
 
 	local function CloseDrop()
 		DropdownOpen = false
@@ -395,7 +452,10 @@ local function CreateKuroDropdown(parent, placeholder, optionsCallback)
 				OptBtn.TextColor3 = (optName == "No Options Found") and Theme.Muted or Theme.Text
 				OptBtn.Font = Enum.Font.Gotham
 				OptBtn.TextSize = 11
-				Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0,6)
+				
+				local OptCorner = Instance.new("UICorner")
+				OptCorner.CornerRadius = UDim.new(0,6)
+				OptCorner.Parent = OptBtn
 
 				if optName ~= "No Options Found" then
 					OptBtn.MouseButton1Click:Connect(function()
@@ -450,7 +510,7 @@ local OreDropdown = CreateKuroDropdown(FarmMain, "Select Ore", function()
 	if SelectedZoneName ~= "Select Zone" and SelectedZoneName ~= "No Options Found" and ZonesFolder then
 		local targetZone = ZonesFolder:FindFirstChild(SelectedZoneName)
 		if targetZone then
-			-- LOGIKA DEBUG KAMU: Menelusuri seluruh keturunan zone mencari "Ore" tipe ObjectValue
+			-- LOGIKA DEBUG PEMETAAN BATU MILIKMU YANG BERHASIL
 			for _, obj in ipairs(targetZone:GetDescendants()) do
 				if obj.Name == "Ore" and obj:IsA("ObjectValue") and obj.Value then
 					local oreName = obj.Value.Name
@@ -483,6 +543,8 @@ CreateToggle(FarmMain, "Activate Auto Farm", false, function(state)
 		CurrentTargetOre = nil
 	end
 end)
+
+print("5 - AutoFarm Engine Setup Ready") -- CHECKPOINT 5
 
 --////////////////////////////////////////////////////////////
 -- CORE AUTO FARM ENGINE (DENGAN STRUKTUR POSISI AMAN)
